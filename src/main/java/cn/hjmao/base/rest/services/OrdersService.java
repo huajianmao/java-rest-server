@@ -12,41 +12,61 @@ import java.util.TreeMap;
 @Path("orders")
 public class OrdersService {
   // Stores state simply in a static collection class.
-  private static Map<String, String> orders = new TreeMap<String, String>();
+  private static Map<Integer, Order> orders = new TreeMap<Integer, Order>();
 
-  @Path("/{order}")
-  @PUT
-  @Produces("text/html")
-  public String create(@PathParam("order") String order,
-                       @QueryParam("customer_name") String customerName) {
-    orders.put(order, customerName);
-    return "Added order #" + order;
+  @GET
+  @Produces("application/json")
+  public Response doQuery() {
+    return Response.ok(orders).build();
   }
 
-  @Path("/{order}")
-  @GET
-  @Produces("text/html")
-  public String find(@PathParam("order") String order) {
-    if (orders.containsKey(order))
-      return "<h2>Details on Order #" + order + "</h2><p>Customer name: "
-          + orders.get(order);
-
-    throw new WebApplicationException(Response.Status.NOT_FOUND);
+  private static int LAST_ORDER_ID = 0;
+  @POST
+  @Produces("application/json")
+  public Response create(@FormParam("name") String name) {
+    if (name != null) {
+      int id = LAST_ORDER_ID + 1;
+      Order order = new Order(id, name);
+      orders.put(id, order);
+      LAST_ORDER_ID = id;
+      return Response.ok(order).build();
+    } else {
+      System.err.println("No name!");
+      return Response.status(Response.Status.BAD_REQUEST).build();
+    }
   }
 
-  @Path("/list")
+  @Path("/{id}")
   @GET
-  @Produces("text/html")
-  public String list() {
-    String header = "<h2>All Orders</h2>\n";
+  @Produces("application/json")
+  public Response get(@PathParam("id") int id) {
+    Order order = null;
+    if (orders.containsKey(id)) {
+      order = orders.get(id);
+    }
 
-    header += "<ul>";
-    for (Map.Entry<String, String> order : orders.entrySet())
-      header += "\n<li>#" + order.getKey() + " for " + order.getValue()
-          + "</li>";
+    if (order == null) {
+      return Response.status(Response.Status.NOT_FOUND).build();
+    } else {
+      return Response.ok(order).build();
+    }
+  }
+  class Order {
+    public int getId() {
+      return id;
+    }
 
-    header += "\n</ul>";
+    public String getName() {
+      return name;
+    }
 
-    return header;
+    private int id;
+    private String name;
+
+    public Order(int id, String name) {
+      this.id = id;
+      this.name = name;
+    }
+
   }
 }
